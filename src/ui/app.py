@@ -24,12 +24,10 @@ if "pipeline" not in st.session_state:
     with st.spinner("Initializing neural search weights and HNSW graph matrices..."):
         config.validate_environment()
         
-        # Instantiate index references safely
         sparse_idx = SparseBM25Index()
         sparse_idx.load_index()  # Load pre-built indices if available
         dense_idx = DenseVectorIndex()
         
-        # Bind pipeline nodes onto state cache
         st.session_state.retriever = HybridRetriever(sparse_idx, dense_idx)
         st.session_state.reranker = DocumentReranker()
         st.session_state.generator = GroundedGenerator()
@@ -50,23 +48,18 @@ with col1:
         else:
             with st.spinner("Executing parallel hybrid lookups & neural re-ranking matrices..."):
                 try:
-                    # FIXED: Called .retrieve() instead of non-existent get_relevant_chunks
                     hybrid_candidates = st.session_state.retriever.retrieve(user_query, top_k=config.RETRIEVAL_TOP_K)
                     
                     if not hybrid_candidates:
-                        st.warning("The documentation index is currently completely empty.")
+                        st.warning("The documentation index is currently completely empty. Please upload documents first.")
                     else:
-                        # FIXED: Driven through the true attention cross-encoder layer
                         reranked = st.session_state.reranker.rerank(user_query, hybrid_candidates, top_n=config.RERANK_TOP_N)
-                        
-                        # FIXED: Called .generate_answer() matching generator.py signatures
                         payload = st.session_state.generator.generate_answer(user_query, reranked)
                         
                         st.markdown("### 🤖 Synthesized Answer")
                         st.success(payload["answer"])
                         st.markdown(f"**Context Sufficiency Boundary:** `{payload['is_context_sufficient']}`")
                         
-                        # FIXED: Invoked the proper CitationVerifier matching verifier.py blueprint
                         v_matrix = CitationVerifier.verify_citations(payload["answer"], reranked)
                         
                         st.markdown("### 🛡️ Citation Trace Integrity Check")
@@ -81,37 +74,47 @@ with col1:
 
 with col2:
     st.header("📂 Document Ingestion Node")
-    ingest_path = st.text_input("Absolute/Relative Document File Path:", placeholder="e.g., README.md")
+    
+    # FIXED: Replaced text input with a professional drag-and-drop file uploader
+    uploaded_file = st.file_uploader(
+        "Upload Internal Document:", 
+        type=["txt", "md", "pdf", "html", "htm"],
+        help="Supported formats: PDF, TXT, Markdown, HTML"
+    )
     
     if st.button("Trigger Pipeline Ingestion"):
-        if not ingest_path.strip():
-            st.warning("Provide a valid file sequence mapping.")
+        if uploaded_file is None:
+            st.warning("Please upload a file first before triggering the pipeline.")
         else:
             with st.spinner("Processing structural chunking and dual-indexing runs..."):
                 try:
-                    if not os.path.exists(ingest_path):
-                        st.error(f"File not found tracking path: {ingest_path}")
+                    # Create a secure target directory inside container storage
+                    temp_dir = Path(config.DATA_DIR) / "uploaded_files"
+                    temp_dir.mkdir(parents=True, exist_ok=True)
+                    temp_file_path = temp_dir / uploaded_file.name
+
+                    # Stream bytes out of the browser buffer and save physically onto cloud storage
+                    with open(temp_file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    
+                    # Pass the newly created local path to the parsing router
+                    document = st.session_state.parser.process_file(str(temp_file_path))
+                    raw_chunks = ChunkingEngine.structure_aware_markdown_chunk(document)
+                    
+                    def ui_embedding_fn(texts):
+                        return st.session_state.retriever.dense_index.embedding_fn(texts)
+                        
+                    clean_chunks = st.session_state.deduplicator.deduplicate(raw_chunks, embedding_fn=ui_embedding_fn)
+                    
+                    if not clean_chunks:
+                        st.info("No new unique chunks detected. Ingestion skipped to protect vector weights.")
                     else:
-                        # FIXED: Returns a validated Pydantic Document model object
-                        document = st.session_state.parser.process_file(ingest_path)
+                        # Indexing into both sparse and dense layers
+                        st.session_state.retriever.sparse_index.index_chunks(clean_chunks)
+                        st.session_state.retriever.dense_index.index_chunks(clean_chunks)
                         
-                        # FIXED: Static method invocation passing the Document instance
-                        raw_chunks = ChunkingEngine.structure_aware_markdown_chunk(document)
+                        st.balloons()
+                        st.success(f"Successfully processed! Unique Chunks Indexed: {len(clean_chunks)}")
                         
-                        # FIXED: Deduplication layer injection using the cached embeddings lambda
-                        def ui_embedding_fn(texts):
-                            return st.session_state.retriever.dense_index.embedding_fn(texts)
-                            
-                        clean_chunks = st.session_state.deduplicator.deduplicate(raw_chunks, embedding_fn=ui_embedding_fn)
-                        
-                        if not clean_chunks:
-                            st.info("No new unique chunks detected. Ingestion skipped to protect vector weights.")
-                        else:
-                            # Indexing safely into both system segments
-                            st.session_state.retriever.sparse_index.index_chunks(clean_chunks)
-                            st.session_state.retriever.dense_index.index_chunks(clean_chunks)
-                            
-                            st.balloons()
-                            st.success(f"Successfully processed! Unique Chunks Indexed: {len(clean_chunks)}")
                 except Exception as e:
                     st.error(f"Ingestion worker failure: {str(e)}")
