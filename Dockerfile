@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# FIXED: Set up a dedicated non-root user to perfectly align with Hugging Face policies
+# Set up a dedicated non-root user to perfectly align with Hugging Face policies
 RUN useradd -m -u 1000 user
 USER user
 ENV HOME=/home/user \
@@ -16,7 +16,10 @@ ENV HOME=/home/user \
 
 WORKDIR $HOME/app
 
-# FIXED: Copy requirements and install packages as the safe non-root user
+# FIXED: Explicitly map the container root directory to Python's structural paths
+ENV PYTHONPATH=/home/user/app
+
+# Copy requirements and install packages as the safe non-root user
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
@@ -24,7 +27,7 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 RUN python -c "from chromadb.utils import embedding_functions; embedding_functions.SentenceTransformerEmbeddingFunction(model_name='all-MiniLM-L6-v2')"
 RUN python -c "from sentence_transformers import CrossEncoder; CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')"
 
-# FIXED: Explicitly transfer ownership of all source code files to user 1000
+# Explicitly transfer ownership of all source code files to user 1000
 COPY --chown=user . .
 
 EXPOSE 7860
