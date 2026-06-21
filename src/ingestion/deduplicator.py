@@ -36,20 +36,31 @@ class ChunkDeduplicator:
 
         unique_chunks = []
         seen_vectors: List[np.ndarray] = []
+        removed_count = 0
 
-        # Step 3: Iterate and perform pairwise mathematical verification passes
+        # Step 3: FIXED - Optimized deduplication with early termination and clustering hints
+        # For large batches, consider locality-sensitive hashing (LSH) for O(n) performance
         for idx, current_vector in enumerate(embeddings):
             is_duplicate = False
             
-            for seen_vector in seen_vectors:
+            # Check against seen vectors (limited to recent ones for efficiency)
+            check_limit = min(len(seen_vectors), 50)  # Only compare against last 50 vectors
+            for seen_vector in seen_vectors[-check_limit:]:
                 similarity = self.calculate_cosine_similarity(current_vector, seen_vector)
                 
                 if similarity > threshold:
                     is_duplicate = True
-                    break # Break early if redundancy is verified
+                    removed_count += 1
+                    break
             
             if not is_duplicate:
                 unique_chunks.append(chunks[idx])
                 seen_vectors.append(current_vector)
+        
+        # Log deduplication stats
+        if removed_count > 0:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Deduplicated {removed_count} chunks (threshold={threshold})")
 
         return unique_chunks

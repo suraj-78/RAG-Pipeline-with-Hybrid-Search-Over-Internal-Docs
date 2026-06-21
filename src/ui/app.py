@@ -1,7 +1,9 @@
 import streamlit as st
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
+load_dotenv()
 # Direct Module Imports aligned perfectly with repository architectures
 from src.config import config
 from src.ingestion.parsers import DocumentParserRouter

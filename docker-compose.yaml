@@ -29,7 +29,6 @@ services:
     depends_on:
       - rag-backend
     command: >
-      sh -c "pip install uv &&
-             uv pip install --system streamlit requests &&
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
              streamlit run src/ui/app.py --server.port=8501 --server.address=0.0.0.0"
     restart: unless-stopped

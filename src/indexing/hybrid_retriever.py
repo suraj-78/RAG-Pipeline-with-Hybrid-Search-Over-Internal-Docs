@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from src.indexing.sparse import SparseBM25Index
 from src.indexing.dense import DenseVectorIndex
-from src.ingestion.schemas import Chunk
+from src.ingestion.schemas import Chunk, ChunkMetadata
 
 class HybridRetriever:
     """The orchestration engine that executes parallel search flows and fuses result spaces via RRF."""
@@ -38,7 +38,6 @@ class HybridRetriever:
             if chunk_id not in rrf_scores:
                 # Reconstruct Chunk properties from database return elements if missing
                 # If it wasn't caught by sparse, we instantiate its placement here
-                from src.ingestion.schemas import ChunkMetadata
                 meta = res["metadata"]
                 metadata = ChunkMetadata(
                     source_path=meta["source_path"],

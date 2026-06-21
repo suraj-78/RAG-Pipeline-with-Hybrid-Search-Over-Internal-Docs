@@ -40,16 +40,23 @@ class GroundedGenerator:
 
         user_content = f"User Query: {query}\n\nRetrieved Context Blocks:\n{formatted_context}"
 
-        # Groq supports native JSON Mode execution
-        completion = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "system", "content": self._build_system_prompt()},
-                {"role": "user", "content": user_content}
-            ],
-            response_format={"type": "json_object"}, # Force strict JSON validation
-            temperature=0.0
-        )
+        try:
+            # Groq supports native JSON Mode execution
+            completion = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": self._build_system_prompt()},
+                    {"role": "user", "content": user_content}
+                ],
+                response_format={"type": "json_object"}, # Force strict JSON validation
+                temperature=0.0
+            )
 
-        # Parse the raw JSON string safely back into dictionary structures
-        return json.loads(completion.choices[0].message.content)
+            # Parse the raw JSON string safely back into dictionary structures
+            return json.loads(completion.choices[0].message.content)
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] Failed to parse Groq JSON response: {str(e)}")
+            return {"answer": "Error: LLM response was not valid JSON.", "is_context_sufficient": False}
+        except Exception as e:
+            print(f"[ERROR] LLM generation failed: {str(e)}")
+            return {"answer": f"Error: {str(e)}", "is_context_sufficient": False}
