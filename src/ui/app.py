@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-import gc  # FIXED: Critical garbage collection utility to flush volatile memory variables
+import gc  # Critical garbage collection utility to flush volatile memory arrays instantly
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -22,9 +22,11 @@ st.title("🚀 Enterprise Hybrid RAG Engine over Internal Docs")
 st.subheader("BTech CSE Specialization in AI - Placement Verification Center")
 st.markdown("---")
 
-# Initialize and Cache Engines into Streamlit Session State securely
+# =====================================================================
+# INITIALIZATION & FORCED MODEL EAGER WARMUP (Prevents Thread Freeze)
+# =====================================================================
 if "pipeline" not in st.session_state:
-    with st.spinner("Initializing neural search weights and HNSW graph matrices..."):
+    with st.spinner("🚀 [STARTUP] Booting neural search layers & eager loading model weights into RAM..."):
         config.validate_environment()
         
         sparse_idx = SparseBM25Index()
@@ -37,6 +39,21 @@ if "pipeline" not in st.session_state:
         st.session_state.generator = GroundedGenerator()
         st.session_state.parser = DocumentParserRouter()
         st.session_state.deduplicator = ChunkDeduplicator()
+        
+        # FIXED: Forced Model Warmup to prevent lazy-loading crashes during file uploads
+        try:
+            # 1. Warm up Dense Vector Encoder
+            st.session_state.retriever.dense_index.embedding_fn(["warmup text matrix sequence"])
+            
+            # 2. Warm up Neural Cross-Encoder Reranker using a mock chunk object
+            class MockChunk:
+                def __init__(self, content): self.page_content = content
+            st.session_state.reranker.rerank("warmup", [MockChunk("warmup cache mapping verification")], top_n=1)
+            
+            print("✅ [WARMUP] All heavy transformers are eagerly pre-loaded and baked into RAM.")
+        except Exception as warmup_err:
+            print(f"⚠️ [WARMUP WARNING] Pre-loading diagnostic layer bypassed: {str(warmup_err)}")
+            
         st.session_state.pipeline = True
 
 col1, col2 = st.columns([2, 1])
@@ -89,7 +106,9 @@ with col2:
         if uploaded_file is None:
             st.warning("Please upload a file first before triggering the pipeline.")
         else:
-            with st.spinner("Processing structural chunking and dual-indexing runs..."):
+            # FIXED: Using dynamic st.status to stream continuous real-time handshake tokens 
+            # and completely stop browser WebSocket connection dropped loops during heavy computations.
+            with st.status("Processing Document Ingestion Pipeline...", expanded=True) as status_box:
                 try:
                     temp_dir = Path(config.DATA_DIR) / "uploaded_files"
                     temp_dir.mkdir(parents=True, exist_ok=True)
@@ -98,27 +117,22 @@ with col2:
                     with open(temp_file_path, "wb") as f:
                         f.write(uploaded_file.getbuffer())
                     
+                    status_box.write("📄 Executing secure document layout parsing...")
                     document = st.session_state.parser.process_file(str(temp_file_path))
                     
                     if document.metadata.file_type == "md":
-                        st.info("Structure-Aware Markdown Chunking activated.")
+                        status_box.write("✂️ Structure-Aware Markdown Chunking activated.")
                         raw_chunks = ChunkingEngine.structure_aware_markdown_chunk(document)
                     else:
-                        st.info(f"Fixed-Size Character Overlap Chunking activated for .{document.metadata.file_type} file.")
+                        status_box.write(f"✂️ Slicing .{document.metadata.file_type} text blocks via sliding windows...")
                         raw_chunks = ChunkingEngine.fixed_size_chunk(
                             document, 
                             chunk_size=config.CHUNK_SIZE, 
                             chunk_overlap=config.CHUNK_OVERLAP
                         )
                     
-                    # =====================================================================
-                    # FIXED: Memory-Safe Mini-Batching Embedding Driver to prevent HF OOM
-                    # =====================================================================
+                    # Memory-Safe Mini-Batching Embedding Driver 
                     def ui_embedding_fn(texts):
-                        """
-                        Throttles text embeddings operations into safe mini-batches of 16 arrays.
-                        Keeps RAM footprint tightly flattened to protect free-tier cloud container limits.
-                        """
                         batch_size = 16
                         all_embeddings = []
                         for i in range(0, len(texts), batch_size):
@@ -127,32 +141,30 @@ with col2:
                             all_embeddings.extend(batch_res)
                         return all_embeddings
                         
-                    # Step 3: Run deduplication loop using our batch-throttled driver
-                    st.info("⚡ Running pairwise text deduplication pass in small safe batches...")
+                    status_box.write("⚡ Scanning for duplicate content profiles...")
                     clean_chunks = st.session_state.deduplicator.deduplicate(raw_chunks, embedding_fn=ui_embedding_fn)
                     
                     if not clean_chunks:
-                        st.info("No new unique chunks detected. Ingestion skipped to protect database index integrity.")
+                        status_box.update(label="ℹ️ Duplicate text structure filtered out. Index skipped.", state="complete")
                     else:
-                        st.info(f"📥 Loading {len(clean_chunks)} clean chunks concurrently into Dual-Indices...")
+                        status_box.write(f"📥 Concurrently indexing {len(clean_chunks)} unique items...")
                         
-                        # Step 4a: Index into sparse inverted arrays
+                        # Index into sparse matrix
                         st.session_state.retriever.sparse_index.index_chunks(clean_chunks)
                         
-                        # FIXED: Step 4b: Vector DB injection split into incremental steps of 25 chunks
-                        # to prevent massive array matrix sizing allocation payload choking on cloud CPU.
+                        # Incremental batch load to avoid vector database serialization locks
                         vector_batch_size = 25
                         for j in range(0, len(clean_chunks), vector_batch_size):
                             sub_batch = clean_chunks[j:j + vector_batch_size]
                             st.session_state.retriever.dense_index.index_chunks(sub_batch)
                         
+                        status_box.update(label="✅ Pipeline Ingestion Successful! Dual-Indices Updated.", state="complete")
                         st.balloons()
-                        st.success(f"🚀 Successfully processed! Unique Chunks Indexed: {len(clean_chunks)}")
                         
                 except Exception as e:
-                    st.error(f"Ingestion worker failure: {str(e)}")
+                    status_box.update(label=f"❌ Ingestion Worker Aborted: {str(e)}", state="error")
                 finally:
-                    # FIXED: Hard cleanup pass releasing system descriptors instantly
+                    # Explicit forced RAM flush execution
                     if 'uploaded_file' in locals():
                         del uploaded_file
-                    gc.collect()  # Forces garbage collection arrays purge from active RAM threads
+                    gc.collect()
