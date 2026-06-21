@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-import gc  # FIXED: Added garbage collection interface to prevent cloud OOM crashes
+import gc  # FIXED: Critical garbage collection utility to flush volatile memory variables
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -19,6 +19,7 @@ from src.generation.verifier import CitationVerifier
 
 st.set_page_config(page_title="Enterprise Hybrid RAG Dashboard", layout="wide")
 st.title("🚀 Enterprise Hybrid RAG Engine over Internal Docs")
+st.subheader("BTech CSE Specialization in AI - Placement Verification Center")
 st.markdown("---")
 
 # Initialize and Cache Engines into Streamlit Session State securely
@@ -27,10 +28,10 @@ if "pipeline" not in st.session_state:
         config.validate_environment()
         
         sparse_idx = SparseBM25Index()
-        sparse_idx.load_index()  # Load pre-built indices if available
+        sparse_idx.load_index()  # Load pre-built indices if available on disk
         dense_idx = DenseVectorIndex()
         
-        # Binding pipeline nodes onto state cache
+        # Binding pipeline nodes onto state cache cleanly
         st.session_state.retriever = HybridRetriever(sparse_idx, dense_idx)
         st.session_state.reranker = DocumentReranker()
         st.session_state.generator = GroundedGenerator()
@@ -110,23 +111,48 @@ with col2:
                             chunk_overlap=config.CHUNK_OVERLAP
                         )
                     
+                    # =====================================================================
+                    # FIXED: Memory-Safe Mini-Batching Embedding Driver to prevent HF OOM
+                    # =====================================================================
                     def ui_embedding_fn(texts):
-                        return st.session_state.retriever.dense_index.embedding_fn(texts)
+                        """
+                        Throttles text embeddings operations into safe mini-batches of 16 arrays.
+                        Keeps RAM footprint tightly flattened to protect free-tier cloud container limits.
+                        """
+                        batch_size = 16
+                        all_embeddings = []
+                        for i in range(0, len(texts), batch_size):
+                            batch_texts = texts[i:i + batch_size]
+                            batch_res = st.session_state.retriever.dense_index.embedding_fn(batch_texts)
+                            all_embeddings.extend(batch_res)
+                        return all_embeddings
                         
+                    # Step 3: Run deduplication loop using our batch-throttled driver
+                    st.info("⚡ Running pairwise text deduplication pass in small safe batches...")
                     clean_chunks = st.session_state.deduplicator.deduplicate(raw_chunks, embedding_fn=ui_embedding_fn)
                     
                     if not clean_chunks:
-                        st.info("No new unique chunks detected. Ingestion skipped.")
+                        st.info("No new unique chunks detected. Ingestion skipped to protect database index integrity.")
                     else:
+                        st.info(f"📥 Loading {len(clean_chunks)} clean chunks concurrently into Dual-Indices...")
+                        
+                        # Step 4a: Index into sparse inverted arrays
                         st.session_state.retriever.sparse_index.index_chunks(clean_chunks)
-                        st.session_state.retriever.dense_index.index_chunks(clean_chunks)
+                        
+                        # FIXED: Step 4b: Vector DB injection split into incremental steps of 25 chunks
+                        # to prevent massive array matrix sizing allocation payload choking on cloud CPU.
+                        vector_batch_size = 25
+                        for j in range(0, len(clean_chunks), vector_batch_size):
+                            sub_batch = clean_chunks[j:j + vector_batch_size]
+                            st.session_state.retriever.dense_index.index_chunks(sub_batch)
                         
                         st.balloons()
-                        st.success(f"Successfully processed! Unique Chunks Indexed: {len(clean_chunks)}")
+                        st.success(f"🚀 Successfully processed! Unique Chunks Indexed: {len(clean_chunks)}")
                         
                 except Exception as e:
                     st.error(f"Ingestion worker failure: {str(e)}")
                 finally:
-                    # FIXED: Explicitly force python to collect unreferenced memory buffers and flush RAM
-                    del uploaded_file
-                    gc.collect()
+                    # FIXED: Hard cleanup pass releasing system descriptors instantly
+                    if 'uploaded_file' in locals():
+                        del uploaded_file
+                    gc.collect()  # Forces garbage collection arrays purge from active RAM threads
