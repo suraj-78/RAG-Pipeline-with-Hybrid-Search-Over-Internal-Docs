@@ -1,19 +1,37 @@
 import os
 from typing import List, Dict, Any
 import chromadb
-from chromadb.utils import embedding_functions
+from chromadb.api.types import EmbeddingFunction, Documents, Embeddings  # FIXED: Imported core typing interfaces
+from sentence_transformers import SentenceTransformer  # FIXED: Direct clean loading layer
 from src.ingestion.schemas import Chunk
 from src.config import config  # Centralized configuration gateway
+
+class LocalSentenceTransformerEmbeddingFunction(EmbeddingFunction):
+    """Custom high-performance embedding driver to completely bypass PyTorch 2.x meta-tensor bugs on Windows."""
+    def __init__(self, model_name: str):
+        import torch
+        # Explicitly determine physical hardware targets, preventing empty meta device initialization deadlocks
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"[INFRASTRUCTURE] Initializing local embedding tensors securely on device target: '{self.device}'")
+        
+        # Instantiate directly using SentenceTransformer to enforce clean weight allocation mappings
+        self.model = SentenceTransformer(model_name, device=self.device)
+
+    def __call__(self, input: Documents) -> Embeddings:
+        """Fulfills ChromaDB's operational contract for batch text vectorizations."""
+        embeddings = self.model.encode(input, convert_to_numpy=True)
+        return embeddings.tolist()
+
 
 class DenseVectorIndex:
     """The engineering interface driving dense vector storage and local HNSW graph lookups."""
 
     def __init__(self, collection_name: str = "internal_docs"):
-        # Fixed: Pulled the storage path directly from the central config state
+        # Pulled the storage path directly from the central config state
         self.client = chromadb.PersistentClient(path=config.CHROMA_STORAGE_DIR)
         
-        # Fixed: Replaced hardcoded string with central configuration parameter
-        self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+        # FIXED: Injected our bulletproof custom embedding function instead of Chroma's faulty utility
+        self.embedding_fn = LocalSentenceTransformerEmbeddingFunction(
             model_name=config.EMBEDDING_MODEL_NAME
         )
         
