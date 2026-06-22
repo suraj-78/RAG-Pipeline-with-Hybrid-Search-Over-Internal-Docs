@@ -3,7 +3,7 @@ import os
 import gc  # Critical garbage collection utility to flush volatile memory arrays instantly
 from pathlib import Path
 from dotenv import load_dotenv
-
+import sys
 load_dotenv()
 # Direct Module Imports aligned perfectly with repository architectures
 from src.config import config
@@ -21,7 +21,12 @@ st.set_page_config(page_title="Enterprise Hybrid RAG Dashboard", layout="wide")
 st.title("🚀 Enterprise Hybrid RAG Engine over Internal Docs")
 st.subheader("BTech CSE Specialization in AI - Placement Verification Center")
 st.markdown("---")
-
+# =====================================================================
+# SYSTEM GUARD: Dynamic Root Path Injection to prevent ModuleNotFoundError
+# =====================================================================
+PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 # =====================================================================
 # INITIALIZATION & FORCED MODEL EAGER WARMUP (Prevents Thread Freeze)
 # =====================================================================
