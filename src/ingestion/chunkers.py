@@ -1,5 +1,6 @@
 import re
 from typing import List
+from src.config import config       
 from src.ingestion.schemas import Document, Chunk, ChunkMetadata
 
 class ChunkingEngine:
@@ -8,6 +9,13 @@ class ChunkingEngine:
     @staticmethod
     def fixed_size_chunk(document: Document, chunk_size: int = 500, chunk_overlap: int = 100) -> List[Chunk]:
         """Splits data strictly by character size windows with sliding overlaps."""
+
+        # <-- BUG FIX: Fallback directly to AppConfig if parameters are not explicitly passed
+        if chunk_size is None:
+            chunk_size = config.CHUNK_SIZE
+        if chunk_overlap is None:
+            chunk_overlap = config.CHUNK_OVERLAP
+            
         text = document.page_content
         chunks = []
         start = 0

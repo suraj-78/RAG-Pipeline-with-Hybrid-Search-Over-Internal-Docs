@@ -16,3 +16,4 @@ beautifulsoup4==4.12.3
 python-dotenv>=1.0.1
 watchfiles>=0.21.0
 rich==13.9.4
+pypdf

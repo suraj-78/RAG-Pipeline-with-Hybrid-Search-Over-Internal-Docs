@@ -1,8 +1,9 @@
 import os
+import re  # <-- BUG FIX: Imported regex library to prevent NameError in re.sub
 from typing import Any
 from pypdf import PdfReader
 from bs4 import BeautifulSoup
-from src.ingestion.schemas import Document, DocumentMetadata  # Assuming your schemas match this placement
+from src.ingestion.schemas import Document, DocumentMetadata
 
 class DocumentParserRouter:
     """Enterprise document routing engine with embedded strict unicode sanitization."""
@@ -17,10 +18,7 @@ class DocumentParserRouter:
             return ""
         
         # Step 1: Strip out unpaired surrogates (\ud800 to \udfff) which choke Pydantic's Rust validator
-        clean_chars = [
-            char for char in raw_text 
-            if not ('\ud800' <= char <= '\udfff')
-        ]
+        clean_chars = [char for char in raw_text if not ('\ud800' <= char <= '\udfff')]
         text_without_surrogates = "".join(clean_chars)
         
         # Step 2: Force encode/decode pass to drop any non-utf8 compliant byte sequences
@@ -28,7 +26,19 @@ class DocumentParserRouter:
         clean_string = utf8_bytes.decode("utf-8", errors="ignore")
         
         # Step 3: Remove hidden null bytes (\x00) which break vector database indexing operations
-        return clean_string.replace("\x00", "")
+        clean_string = clean_string.replace("\x00", "")
+
+        # =====================================================================
+        # NEW BUG FIX: Text Normalization for Bullet Points & Word Gluing
+        # =====================================================================
+        # 1. Corrupt PDF bullet indicators () ko standard clean dash (-) se replace karo
+        clean_string = clean_string.replace("", "\n - ")
+        
+        # 2. Fix word gluing issues where lowercase letters stick to lowercase/uppercase (e.g., laidby -> laid by)
+        # This regex injects space before common structural transition keywords if glued
+        clean_string = re.sub(r'([a-z])(based|by|on|with|under|from|to|for|rules|procedures)', r'\1 \2', clean_string)
+        
+        return clean_string
 
     def _parse_pdf(self, file_path: str) -> str:
         """Extracts text loops from standard PDF layers safely."""

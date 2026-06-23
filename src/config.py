@@ -17,10 +17,12 @@ class AppConfig:
     JUDGE_MODEL_NAME = "llama-3.3-70b-versatile"
     
     # Text Processing Hyper-parameters
-    CHUNK_SIZE = 500
-    CHUNK_OVERLAP = 50
+   # Insaaf se ye parameters change karo Line 21-24 par:
+    # Text Processing Hyper-parameters
+    CHUNK_SIZE = 1500  # 500 se badhaakar 1500 characters (approx 250-300 words) karo
+    CHUNK_OVERLAP = 300 # Boundary protection badhaakar 300 karo
     RETRIEVAL_TOP_K = 10
-    RERANK_TOP_N = 3
+    RERANK_TOP_N = 5   # Top candid ates re-ranker ko thode zyada bhejo (3 se 5)
     
     # Security Credentials Gateway
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")

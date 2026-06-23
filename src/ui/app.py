@@ -6,6 +6,12 @@ from dotenv import load_dotenv
 import sys
 load_dotenv()
 # Direct Module Imports aligned perfectly with repository architectures
+
+# Forcefully inject the actual project root into Python search paths
+PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+    
 from src.config import config
 from src.ingestion.parsers import DocumentParserRouter
 from src.ingestion.chunkers import ChunkingEngine
