@@ -27,7 +27,7 @@ from src.generation.verifier import CitationVerifier
 
 # Professional Startup Layout Branding Setup
 st.set_page_config(
-    page_title="Enterprise Hybrid RAG Dashboard", 
+    page_title="Enterprise Hybrid-RAG Dashboard", 
     page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
