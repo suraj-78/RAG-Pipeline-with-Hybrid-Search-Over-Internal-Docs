@@ -1,4 +1,4 @@
-`# 🚀 Enterprise Hybrid RAG Engine
+## Enterprise Hybrid RAG Engine
 
 A production-ready Retrieval-Augmented Generation (RAG) system for querying internal documents using **Hybrid Search (Dense + Sparse Retrieval)** with reranking and LLM-based response generation.
 
