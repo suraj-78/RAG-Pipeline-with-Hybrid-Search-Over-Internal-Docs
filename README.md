@@ -1,3 +1,14 @@
+
+---
+title: Enterprise Hybrid RAG Engine
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
+
 # Enterprise Hybrid RAG Engine over Unstructured Documentation
 
 [![Production Ready](https://img.shields.io/badge/status-production--ready-green.svg)](https://github.com/divyyadav007/RAG-Pipeline-with-Hybrid-Search-Over-Internal-Docs)
