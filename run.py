@@ -1,8 +1,11 @@
 import os
 import sys
+import streamlit.web.cli as stcli
 
-# Forcefully append the current working directory to system path
+# 1. Project path ko register karo
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Execute the actual UI application core directly
-from src.ui import app
+# 2. Enforce Streamlit to internally boot-up our target application file
+if __name__ == "__main__":
+    sys.argv = ["streamlit", "run", "src/ui/app.py"]
+    sys.exit(stcli.main())
