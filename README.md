@@ -1,4 +1,12 @@
 
+---
+title: Enterprise Hybrid RAG Engine
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
 
 # Enterprise Hybrid RAG Engine over Unstructured Internal Docs
 
