@@ -1,4 +1,4 @@
-```markdown
+
 
 # Enterprise Hybrid RAG Engine over Unstructured Internal Docs
 
@@ -227,7 +227,5 @@ The repository incorporates an isolated diagnostic scoring module (`src/evaluati
 ## 🔒 License
 
 Distributed under the MIT Operational Software License. See `LICENSE` inside the repository root for detailed permission parameters.
-
-```
 
 ```
