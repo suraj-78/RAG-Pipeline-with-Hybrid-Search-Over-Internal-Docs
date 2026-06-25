@@ -1,17 +1,19 @@
-import streamlit as st
 import os
 import gc  # Critical garbage collection utility to flush volatile memory arrays instantly
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
-import sys
-load_dotenv()
-# Direct Module Imports aligned perfectly with repository architectures
+import streamlit as st
 
-# Forcefully inject the actual project root into Python search paths
+load_dotenv()
+
+# =====================================================================
+# SYSTEM GUARD: Dynamic Root Path Injection to prevent ModuleNotFoundError
+# =====================================================================
 PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
-    
+
 from src.config import config
 from src.ingestion.parsers import DocumentParserRouter
 from src.ingestion.chunkers import ChunkingEngine
@@ -23,21 +25,32 @@ from src.reranking.cross_encoder import DocumentReranker
 from src.generation.generator import GroundedGenerator
 from src.generation.verifier import CitationVerifier
 
-st.set_page_config(page_title="Enterprise Hybrid RAG Dashboard", layout="wide")
-st.title("🚀 Enterprise Hybrid RAG Engine over Internal Docs")
-st.subheader("BTech CSE Specialization in AI - Placement Verification Center")
-st.markdown("---")
-# =====================================================================
-# SYSTEM GUARD: Dynamic Root Path Injection to prevent ModuleNotFoundError
-# =====================================================================
-PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+# Professional Startup Layout Branding Setup
+st.set_page_config(
+    page_title="Enterprise Hybrid RAG Dashboard", 
+    page_icon="🚀",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Enterprise Modern UI CSS Styling Injection
+st.markdown("""
+    <style>
+    .main-title { font-size: 2.4rem !important; font-weight: 700 !important; color: #1E3A8A; margin-bottom: 0.2rem; }
+    .sub-title { font-size: 1.1rem !important; color: #4B5563; margin-bottom: 2rem; }
+    .section-header { font-size: 1.4rem !important; font-weight: 600 !important; color: #1F2937; border-bottom: 2px solid #E5E7EB; padding-bottom: 0.5rem; margin-top: 1rem; }
+    .metric-card { background-color: #F9FAFB; padding: 1rem; border-radius: 0.5rem; border: 1px solid #E5E7EB; }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.markdown('<div class="main-title">🚀 Enterprise Hybrid RAG Engine</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Production-Grade Knowledge Synthesis Framework Over Complex Unstructured Documentation</div>', unsafe_allow_html=True)
+
 # =====================================================================
 # INITIALIZATION & FORCED MODEL EAGER WARMUP (Prevents Thread Freeze)
 # =====================================================================
 if "pipeline" not in st.session_state:
-    with st.spinner("🚀 [STARTUP] Booting neural search layers & eager loading model weights into RAM..."):
+    with st.spinner("📦 [INFRASTRUCTURE] Initializing neural search layers & caching transformer weights into RAM..."):
         config.validate_environment()
         
         sparse_idx = SparseBM25Index()
@@ -67,59 +80,75 @@ if "pipeline" not in st.session_state:
             
         st.session_state.pipeline = True
 
-col1, col2 = st.columns([2, 1])
+# Dashboard Grid Framework Realignment
+col1, col2 = st.columns([2, 1], gap="large")
 
 with col1:
-    st.header("🔍 Ask the Documentation Space")
-    user_query = st.text_input("Enter your policy or architectural infrastructure question:", 
-                               placeholder="e.g., What happens if a student has less than 75% attendance?")
+    st.markdown('<div class="section-header">🔍 Query Interface</div>', unsafe_allow_html=True)
+    st.write("")
     
-    if st.button("Execute Pipeline Search", type="primary"):
+    user_query = st.text_input(
+        "Enter your policy, compliance, or structural infrastructure inquiry:", 
+        placeholder="e.g., What are the clear compliance requirements regarding internal regulatory parameters?",
+        label_visibility="visible"
+    )
+    
+    if st.button("Execute Intelligence Query", type="primary", use_container_width=True):
         if not user_query.strip():
-            st.warning("Please enter a valid non-empty question string.")
+            st.warning("Query validation error: Input string cannot be empty.")
         else:
-            with st.spinner("Executing parallel hybrid lookups & neural re-ranking matrices..."):
+            with st.spinner("Executing parallel lookups, score distributions, and neural cross-attention routing..."):
                 try:
+                    # Parallel Index Extraction Ingress
                     hybrid_candidates = st.session_state.retriever.retrieve(user_query, top_k=config.RETRIEVAL_TOP_K)
                     
                     if not hybrid_candidates:
-                        st.warning("The documentation index is currently completely empty. Please upload documents first.")
+                        st.info("System Notification: The database index space is currently completely empty. Please upload documents.")
                     else:
+                        # Cross-Attention Neural Filtration
                         reranked = st.session_state.reranker.rerank(user_query, hybrid_candidates, top_n=config.RERANK_TOP_N)
+                        
+                        # LLM Direct Grounded Generation Token Stream
                         payload = st.session_state.generator.generate_answer(user_query, reranked)
                         
-                        st.markdown("### 🤖 Synthesized Answer")
+                        st.markdown("### 🤖 Synthesized Knowledge Output")
                         st.success(payload["answer"])
-                        st.markdown(f"**Context Sufficiency Boundary:** `{payload['is_context_sufficient']}`")
                         
+                        # Metadata Analysis Layout
+                        m_col1, m_col2 = st.columns(2)
+                        with m_col1:
+                            st.markdown(f"**Context Grounding Sufficiency Boundary:** `{payload['is_context_sufficient']}`")
+                        
+                        # Dynamic Trace Matrix Check
                         v_matrix = CitationVerifier.verify_citations(payload["answer"], reranked)
                         
-                        st.markdown("### 🛡️ Citation Trace Integrity Check")
+                        st.markdown("### 🛡️ Citation Trace Integrity Diagnostics")
                         if v_matrix.get("is_valid", False):
-                            st.info("✅ All generated text assertions match the physical document chunk anchors securely.")
+                            st.info("✅ System Verification Complete: All response metrics map accurately to document chunk source anchors.")
                         else:
-                            st.error("⚠️ Potential Alignment Drift Detected! References failed index mapping.")
+                            st.error("⚠️ Alignment Drift Warning! Synthesized claims failed index validation constraints.")
                             if v_matrix.get("flagged_issues"):
                                 st.json(v_matrix["flagged_issues"])
+                                
                 except Exception as e:
-                    st.error(f"Pipeline Runtime Failure: {str(e)}")
+                    st.error(f"Critical Runtime Exception within Pipeline Gateway: {str(e)}")
 
 with col2:
-    st.header("📂 Document Ingestion Node")
+    st.markdown('<div class="section-header">📂 Ingestion Control Panel</div>', unsafe_allow_html=True)
+    st.write("")
     
     uploaded_file = st.file_uploader(
-        "Upload Internal Document:", 
+        "Ingest Corporate Knowledge Bases:", 
         type=["txt", "md", "pdf", "html", "htm"],
-        help="Supported formats: PDF, TXT, Markdown, HTML"
+        help="Supported production document layouts: PDF, Markdown, TXT, HTML"
     )
     
-    if st.button("Trigger Pipeline Ingestion"):
+    if st.button("Trigger Asset Ingestion Pipeline", use_container_width=True):
         if uploaded_file is None:
-            st.warning("Please upload a file first before triggering the pipeline.")
+            st.warning("Action Aborted: Please reference a valid physical file target first.")
         else:
-            # FIXED: Using dynamic st.status to stream continuous real-time handshake tokens 
-            # and completely stop browser WebSocket connection dropped loops during heavy computations.
-            with st.status("Processing Document Ingestion Pipeline...", expanded=True) as status_box:
+            # Enforcing dynamic st.status to hold real-time connection locks during operations
+            with st.status("Initializing Ingestion Engine Core Processors...", expanded=True) as status_box:
                 try:
                     temp_dir = Path(config.DATA_DIR) / "uploaded_files"
                     temp_dir.mkdir(parents=True, exist_ok=True)
@@ -128,21 +157,21 @@ with col2:
                     with open(temp_file_path, "wb") as f:
                         f.write(uploaded_file.getbuffer())
                     
-                    status_box.write("📄 Executing secure document layout parsing...")
+                    status_box.write("📄 Layout Analyzer: Sweeping document structural matrices...")
                     document = st.session_state.parser.process_file(str(temp_file_path))
                     
                     if document.metadata.file_type == "md":
-                        status_box.write("✂️ Structure-Aware Markdown Chunking activated.")
+                        status_box.write("✂️ Content Tokenizer: Structure-Aware Markdown processing initialized.")
                         raw_chunks = ChunkingEngine.structure_aware_markdown_chunk(document)
                     else:
-                        status_box.write(f"✂️ Slicing .{document.metadata.file_type} text blocks via sliding windows...")
+                        status_box.write(f"✂️ Content Tokenizer: Segmenting .{document.metadata.file_type} layout via character sliding windows...")
                         raw_chunks = ChunkingEngine.fixed_size_chunk(
                             document, 
                             chunk_size=config.CHUNK_SIZE, 
                             chunk_overlap=config.CHUNK_OVERLAP
                         )
                     
-                    # Memory-Safe Mini-Batching Embedding Driver 
+                    # Memory-Safe Mini-Batching Embedding Adapter Strategy
                     def ui_embedding_fn(texts):
                         batch_size = 16
                         all_embeddings = []
@@ -152,30 +181,34 @@ with col2:
                             all_embeddings.extend(batch_res)
                         return all_embeddings
                         
-                    status_box.write("⚡ Scanning for duplicate content profiles...")
+                    status_box.write("⚡ Entropy Guard: Scanning for internal duplicate hash matches...")
                     clean_chunks = st.session_state.deduplicator.deduplicate(raw_chunks, embedding_fn=ui_embedding_fn)
                     
                     if not clean_chunks:
-                        status_box.update(label="ℹ️ Duplicate text structure filtered out. Index skipped.", state="complete")
+                        status_box.update(label="ℹ️ Ingestion Notice: Duplicate content footprint neutralized. Indexing skipped.", state="complete")
                     else:
-                        status_box.write(f"📥 Concurrently indexing {len(clean_chunks)} unique items...")
+                        status_box.write(f"📥 Matrix Registrar: Concurrent batch loading {len(clean_chunks)} data slices into local matrices...")
                         
-                        # Index into sparse matrix
+                        # Synchronize onto Sparse Matrix Engine
                         st.session_state.retriever.sparse_index.index_chunks(clean_chunks)
                         
-                        # Incremental batch load to avoid vector database serialization locks
+                        # Sequential Incremental Array Writes to Completely Avoid SQLite/ChromaDB Thread Collisions
                         vector_batch_size = 25
                         for j in range(0, len(clean_chunks), vector_batch_size):
                             sub_batch = clean_chunks[j:j + vector_batch_size]
                             st.session_state.retriever.dense_index.index_chunks(sub_batch)
                         
-                        status_box.update(label="✅ Pipeline Ingestion Successful! Dual-Indices Updated.", state="complete")
+                        status_box.update(label="✅ Asset Processing Succeeded: Index Topologies Fully Updated.", state="complete")
                         st.balloons()
                         
                 except Exception as e:
-                    status_box.update(label=f"❌ Ingestion Worker Aborted: {str(e)}", state="error")
+                    status_box.update(label=f"❌ Ingestion Worker Routine Terminated: {str(e)}", state="error")
                 finally:
-                    # Explicit forced RAM flush execution
+                    # Deterministic explicit sweep of systemic file buffers from volatility pools
                     if 'uploaded_file' in locals():
                         del uploaded_file
                     gc.collect()
+
+# Dashboard System Diagnostic Layer Footer
+st.markdown("---")
+st.caption("Enterprise Hybrid RAG Engine Node v1.0.0 • Architecture Topology: Cosine Space HNSW + Inverted BM25 Token Grid")
