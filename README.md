@@ -1,3 +1,15 @@
+---
+title: ProductionRAG
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: streamlit
+sdk_version: 1.46.1
+app_file: src\ui\app.py
+pinned: false
+---
+
+
 # Enterprise Hybrid RAG Engine over Internal Docs
 BTech CSE Specialization in AI - Placement Query Verification Core.
 
