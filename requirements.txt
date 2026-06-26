@@ -1,6 +1,6 @@
 torch>=2.2.0
+streamlit==1.32.0
 fastapi>=0.110.0
-streamlit==1.35.0
 starlette>=0.37.0
 uvicorn>=0.29.0
 requests
@@ -15,4 +15,3 @@ beautifulsoup4==4.12.3
 python-dotenv>=1.0.1
 watchfiles>=0.21.0
 rich==13.9.4
-pypdf
