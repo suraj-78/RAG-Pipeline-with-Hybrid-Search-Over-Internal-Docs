@@ -10,6 +10,56 @@
 An enterprise-grade, asynchronous, and fully decoupled **Retrieval-Augmented Generation (RAG)** engine designed to search internal college policies (Code of Conduct, Divyangjan Policy, Anti-Ragging regulations, and Canteen Operations) and generate grounded answers with **100% verified citation traces**.
 
 ---
+## 🏗️ Detailed Pipeline Architecture
+
+The application decouples document ingestion from the query runtime to maintain high performance and scalability:
+
+```mermaid
+graph TD
+    A[Raw Documents: PDF, HTML, MD, TXT] --> B[Unicode & Regex Sanitizer]
+    B --> C[Chunking Engine: 1500-char Sliding Window]
+    C --> D[Chunk Deduplicator: Cosine Similarity > 0.95]
+    D --> E[Dual Indexing Ingestion]
+    E --> F[Dense Vector Index: ChromaDB]
+    E --> G[Sparse Index: Rank-BM25]
+    
+    H[User Query] --> I[Parallel Search Retriever]
+    I --> F
+    I --> G
+    F --> J[Reciprocal Rank Fusion RRF Engine]
+    G --> J
+    J --> K[Cross-Encoder Neural Re-ranking Node]
+    K --> L[Grounded LLM Generator: Llama 3.1 via Groq]
+    L --> M[Citation Verifier Guardrail]
+    M --> N[Final Grounded Answer to User]
+```
+---
+
+### Core Architecture Stages:
+1. **Document Ingestion & Sanitization**: Parses raw files (PDF, HTML, MD, TXT) and strips out corrupted unicode characters and normalizes document layouts.
+2. **Dual-Index Ingestion**: Chunks documents into sliding character windows and builds two parallel indices:
+   - **Dense Index**: High-dimensional semantic vectors using ChromaDB and `all-MiniLM-L6-v2`.
+   - **Sparse Index**: Lexical and vocabulary keyword mappings using `rank-bm25`.
+3. **Hybrid Search & Fusion**: Executes parallel lookups across both indices and fuses their rankings using the **Reciprocal Rank Fusion (RRF)** algorithm:
+   $$\text{RRF Score} = \sum_{m \in M} \frac{1}{k + r_m(d)}$$
+4. **Cross-Encoder Re-Ranking**: Filters out noisy context blocks using the `ms-marco-MiniLM-L-6-v2` cross-encoder to compute query-document cross-attention.
+5. **Grounded Generation & Citation Trace**: Synthesizes the final response using Llama 3.1 via Groq JSON Mode, with the **Citation Verifier** auditing generated citations to ensure 100% truthfulness.
+
+---
+
+## 🛠️ Tech Stack Matrix
+
+| Domain Layer | Component Technology | Selection Justification |
+| :--- | :--- | :--- |
+| **Interactive UI** | `Streamlit Framework` | Dynamic dashboard management, real-time status updates, and session-state caching. |
+| **Asynchronous API** | `FastAPI (Uvicorn)` | Provides high-performance parallel endpoints and automatic OpenAPI documentation. |
+| **Dense Vector Space** | `ChromaDB (Persistent)` | High-efficiency local vector store driving Cosine HNSW topological graph lookups. |
+| **Sparse Token Store** | `Rank-BM25` | Delivers exact lexical and keyword matching, mitigating dense vector keyword gaps. |
+| **Vectorization Core** | `SentenceTransformers` | Hosts `all-MiniLM-L6-v2` locally for high-speed embedded text mapping. |
+| **Neural Re-ranking** | `Cross-Encoder Node` | Embeds `ms-marco-MiniLM-L-6-v2` to compute explicit sentence cross-attention filtering. |
+| **Inference Engine** | `Groq Cloud Infrastructure` | Sub-second token streaming responses using production-grade `llama-3.1-8b-instant` models. |
+
+---
 
 ## 📊 System Performance & Evaluation Scores
 
@@ -51,58 +101,6 @@ Query Execution Lifecycle Latency Split (Total: ~445ms)
 │ Parallel Search (45ms)  │ Neural Re-ranking Node (120ms)    │ LLM Token Ingress Generation & Citations Verification (280ms)   │
 └────────────────────────┴───────────────────────────────────┴─────────────────────────────────────────────────────────────────┘
 ```
-
----
-
-## 🏗️ Detailed Pipeline Architecture
-
-The application decouples document ingestion from the query runtime to maintain high performance and scalability:
-
-```mermaid
-graph TD
-    A[Raw Documents: PDF, HTML, MD, TXT] --> B[Unicode & Regex Sanitizer]
-    B --> C[Chunking Engine: 1500-char Sliding Window]
-    C --> D[Chunk Deduplicator: Cosine Similarity > 0.95]
-    D --> E[Dual Indexing Ingestion]
-    E --> F[Dense Vector Index: ChromaDB]
-    E --> G[Sparse Index: Rank-BM25]
-    
-    H[User Query] --> I[Parallel Search Retriever]
-    I --> F
-    I --> G
-    F --> J[Reciprocal Rank Fusion RRF Engine]
-    G --> J
-    J --> K[Cross-Encoder Neural Re-ranking Node]
-    K --> L[Grounded LLM Generator: Llama 3.1 via Groq]
-    L --> M[Citation Verifier Guardrail]
-    M --> N[Final Grounded Answer to User]
-```
-
-### Core Architecture Stages:
-1. **Document Ingestion & Sanitization**: Parses raw files (PDF, HTML, MD, TXT) and strips out corrupted unicode characters and normalizes document layouts.
-2. **Dual-Index Ingestion**: Chunks documents into sliding character windows and builds two parallel indices:
-   - **Dense Index**: High-dimensional semantic vectors using ChromaDB and `all-MiniLM-L6-v2`.
-   - **Sparse Index**: Lexical and vocabulary keyword mappings using `rank-bm25`.
-3. **Hybrid Search & Fusion**: Executes parallel lookups across both indices and fuses their rankings using the **Reciprocal Rank Fusion (RRF)** algorithm:
-   $$\text{RRF Score} = \sum_{m \in M} \frac{1}{k + r_m(d)}$$
-4. **Cross-Encoder Re-Ranking**: Filters out noisy context blocks using the `ms-marco-MiniLM-L-6-v2` cross-encoder to compute query-document cross-attention.
-5. **Grounded Generation & Citation Trace**: Synthesizes the final response using Llama 3.1 via Groq JSON Mode, with the **Citation Verifier** auditing generated citations to ensure 100% truthfulness.
-
----
-
-## 🛠️ Tech Stack Matrix
-
-| Domain Layer | Component Technology | Selection Justification |
-| :--- | :--- | :--- |
-| **Interactive UI** | `Streamlit Framework` | Dynamic dashboard management, real-time status updates, and session-state caching. |
-| **Asynchronous API** | `FastAPI (Uvicorn)` | Provides high-performance parallel endpoints and automatic OpenAPI documentation. |
-| **Dense Vector Space** | `ChromaDB (Persistent)` | High-efficiency local vector store driving Cosine HNSW topological graph lookups. |
-| **Sparse Token Store** | `Rank-BM25` | Delivers exact lexical and keyword matching, mitigating dense vector keyword gaps. |
-| **Vectorization Core** | `SentenceTransformers` | Hosts `all-MiniLM-L6-v2` locally for high-speed embedded text mapping. |
-| **Neural Re-ranking** | `Cross-Encoder Node` | Embeds `ms-marco-MiniLM-L-6-v2` to compute explicit sentence cross-attention filtering. |
-| **Inference Engine** | `Groq Cloud Infrastructure` | Sub-second token streaming responses using production-grade `llama-3.1-8b-instant` models. |
-
----
 
 ## 🛡️ Key Engineering Safeguards
 
