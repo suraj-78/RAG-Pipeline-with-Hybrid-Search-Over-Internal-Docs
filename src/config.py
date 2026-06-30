@@ -16,13 +16,11 @@ class AppConfig:
     GENERATION_MODEL_NAME = "llama-3.1-8b-instant"
     JUDGE_MODEL_NAME = "llama-3.3-70b-versatile"
     
-    # Text Processing Hyper-parameters
-   # Insaaf se ye parameters change karo Line 21-24 par:
-    # Text Processing Hyper-parameters
-    CHUNK_SIZE = 1500  # 500 se badhaakar 1500 characters (approx 250-300 words) karo
-    CHUNK_OVERLAP = 300 # Boundary protection badhaakar 300 karo
+    # Text Processing Hyper-parameters (optimized for layout structural boundaries)
+    CHUNK_SIZE = 1500  # Target chunk size in characters (approx 250-300 words)
+    CHUNK_OVERLAP = 300 # Character overlap to prevent text splitting at boundaries
     RETRIEVAL_TOP_K = 10
-    RERANK_TOP_N = 5   # Top candid ates re-ranker ko thode zyada bhejo (3 se 5)
+    RERANK_TOP_N = 5   # Number of top candidate chunks to supply to cross-encoder
     
     # Security Credentials Gateway
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")

@@ -31,7 +31,7 @@ class DocumentParserRouter:
         # =====================================================================
         # NEW BUG FIX: Text Normalization for Bullet Points & Word Gluing
         # =====================================================================
-        # 1. Corrupt PDF bullet indicators () ko standard clean dash (-) se replace karo
+        # 1. Replace corrupted PDF bullet characters () with standard clean dashes (-)
         clean_string = clean_string.replace("", "\n - ")
         
         # 2. Fix word gluing issues where lowercase letters stick to lowercase/uppercase (e.g., laidby -> laid by)

@@ -144,8 +144,7 @@ if __name__ == "__main__":
     runner = RAGMetricsRunner(retriever, reranker, generator)
 
     # FIXED: Comprehensive 50-sample Golden Test Suite matched to Policy-Document.pdf layers
-    # src/evaluation/metrics_runner.py ke andar golden_dataset array ko replace karein:
-
+    # Golden dataset matching Policy-Document.pdf structure
     golden_dataset = [
     # === CODE OF CONDUCT & GENERAL DISCIPLINE ===
     {

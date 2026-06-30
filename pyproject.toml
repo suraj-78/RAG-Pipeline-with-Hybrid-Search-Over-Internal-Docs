@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hybrid-rag-engine"
+version = "1.0.0"
+description = "Enterprise Hybrid RAG Engine over Internal Documents combining BM25 keyword matching with dense vector embeddings and cross-encoder re-ranking."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "Divy Yadav", email = "yadavdivy007@gmail.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "torch>=2.2.0",
+    "streamlit==1.32.0",
+    "fastapi>=0.110.0",
+    "starlette>=0.37.0",
+    "uvicorn>=0.29.0",
+    "requests",
+    "chromadb>=0.5.11",
+    "sentence-transformers==3.0.1",
+    "groq==0.9.0",
+    "httpx==0.27.2",
+    "pydantic==2.7.2",
+    "rank-bm25==0.2.2",
+    "pypdf==4.2.0",
+    "beautifulsoup4==4.12.3",
+    "python-dotenv>=1.0.1",
+    "watchfiles>=0.21.0",
+    "rich==13.9.4"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0"
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "W", "I", "N"]
+ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+pythonpath = ["."]

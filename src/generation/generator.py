@@ -1,7 +1,7 @@
 import os
 import json
 from typing import List, Dict, Any
-# WE SWITCHED THE SDK: OpenAI se Groq par shift kiya
+# Transitioned SDK reference from OpenAI to Groq for model inference
 from groq import Groq
 from src.config import config
 
