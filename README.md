@@ -12,8 +12,8 @@
 ---
 
 ## 🖼️ Hero Preview
-![RAG Engine Dashboard Placeholder](https://raw.githubusercontent.com/divyyadav007/RAG-Pipeline-with-Hybrid-Search-Over-Internal-Docs/main/examples/assets/dashboard_preview.png)
-*(Demo GIF Placeholder: Local runtime UI showcasing document ingestion and sub-second citation-traced QA)*
+<img width="1917" height="916" alt="Screenshot 2026-06-30 105834" src="https://github.com/user-attachments/assets/924d09f9-2e4f-46a9-9214-caf42d7f8794" />
+
 
 ---
 
