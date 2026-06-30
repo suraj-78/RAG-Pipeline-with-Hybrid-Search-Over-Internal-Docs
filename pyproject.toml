@@ -7,7 +7,7 @@ name = "hybrid-rag-engine"
 version = "1.0.0"
 description = "Enterprise Hybrid RAG Engine over Internal Documents combining BM25 keyword matching with dense vector embeddings and cross-encoder re-ranking."
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 license = {text = "MIT"}
 authors = [
     {name = "Divy Yadav", email = "yadavdivy007@gmail.com"}
@@ -15,6 +15,7 @@ authors = [
 classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",

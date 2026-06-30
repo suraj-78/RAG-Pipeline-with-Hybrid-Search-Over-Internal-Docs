@@ -31,11 +31,23 @@ class SparseBM25Index:
         return [t for t in tokens if len(t) > 1 and t not in stopwords]
 
     def index_chunks(self, chunks: List[Chunk]) -> None:
-        """Builds and fits the BM25 structural inverted token matrix model map."""
+        """Builds and fits the BM25 structural inverted token matrix model map.
+        
+        Ensures chunks with duplicate IDs are filtered out to prevent token replication.
+        """
         if not chunks:
             return
 
-        self.indexed_chunks.extend(chunks)
+        # Filter out chunks that have already been indexed by their deterministic ID
+        existing_ids = {chunk.id for chunk in self.indexed_chunks}
+        new_chunks = [chunk for chunk in chunks if chunk.id not in existing_ids]
+
+        if not new_chunks:
+            logger.info("All provided chunks are already present in the sparse index. Ingestion skipped.")
+            return
+
+        self.indexed_chunks.extend(new_chunks)
+        logger.info(f"Indexing {len(new_chunks)} new chunks (Total: {len(self.indexed_chunks)}) into sparse BM25 index...")
         
         # Formulate token streams across entire incoming corpus array matrix
         corpus_tokenized = [self._tokenize(chunk.page_content) for chunk in self.indexed_chunks]

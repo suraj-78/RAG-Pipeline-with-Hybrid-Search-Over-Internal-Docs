@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+ FROM python:3.12-slim
 
 # Install system dependencies as root
 RUN apt-get update && apt-get install -y \
@@ -23,15 +23,18 @@ ENV PYTHONPATH=/home/user/app
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Pre-download weights directly into the user's home directory cache
-RUN python -c "from chromadb.utils import embedding_functions; embedding_functions.SentenceTransformerEmbeddingFunction(model_name='all-MiniLM-L6-v2')"
+# Pre-download weights directly into the user's cache directory during build
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 RUN python -c "from sentence_transformers import CrossEncoder; CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')"
 
-# Explicitly transfer ownership of all source code files to user 1000
+# Explicitly transfer ownership of all source code files to the non-root user
 COPY --chown=user . .
 
+# Expose Streamlit (8501) and FastAPI (8000) ports
 EXPOSE 8501
+EXPOSE 8000
 
+# Default command launches the Streamlit UI dashboard
 CMD ["streamlit", "run", "src/ui/app.py", \
      "--server.port=8501", \
      "--server.address=0.0.0.0", \

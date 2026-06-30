@@ -84,13 +84,27 @@ def get_local_embedding_fn(app: FastAPI):
 # API ENDPOINTS
 # =====================================================================
 
+@app.get("/")
+async def root_index():
+    """Returns API server metadata and health status."""
+    return {
+        "title": app.title,
+        "description": app.description,
+        "version": app.version,
+        "status": "healthy",
+        "docs_url": "/docs"
+    }
+
+
 @app.post("/v1/ingest")
-async def ingest_document(payload: IngestRequest):
-    """Production endpoint driving raw ingestion, structural chunking, and dual indexing loops."""
+async def ingest_document(payload: IngestRequest) -> Dict[str, Any]:
+    """Ingests a document from disk, chunks it, deduplicates it, and indexes it into sparse and dense layers."""
     if not payload.file_path.strip():
         raise HTTPException(status_code=400, detail="File path string cannot be empty.")
         
     try:
+        logger.info(f"Received ingestion request for path: {payload.file_path}")
+        
         # Step 1: Parse file securely via state parser router
         document = app.state.parser_router.process_file(payload.file_path)
         
@@ -111,32 +125,41 @@ async def ingest_document(payload: IngestRequest):
         clean_chunks = app.state.deduplicator.deduplicate(raw_chunks, embedding_fn=ui_embedding_fn)
         
         if not clean_chunks:
+            logger.info("Deduplication neutralized all chunks. Skipping indexing.")
             return {"status": "success", "message": "No new unique content chunks detected. Index skipped."}
 
         # Step 4: Index concurrently into parallel systems via active references
         app.state.sparse_index.index_chunks(clean_chunks)
         app.state.dense_index.index_chunks(clean_chunks)
         
+        logger.info(f"Successfully indexed {len(clean_chunks)} chunks for source: {payload.file_path}")
         return {
             "status": "success", 
             "chunks_indexed": len(clean_chunks), 
             "source": payload.file_path
         }
+    except FileNotFoundError as fnf_err:
+        logger.error(f"Ingestion file target not found: {str(fnf_err)}")
+        raise HTTPException(status_code=404, detail=str(fnf_err))
     except Exception as e:
+        logger.error(f"Ingestion pipeline failure: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ingestion pipeline failure: {str(e)}")
 
 
 @app.post("/v1/ask")
-async def process_query(payload: QueryRequest):
-    """Central search engine orchestrating parallel lookup fusions and neural re-ranking matrices."""
+async def process_query(payload: QueryRequest) -> Dict[str, Any]:
+    """Retrieves context chunks using hybrid retrieval, reranks them, and generates an answer."""
     if not payload.question.strip():
         raise HTTPException(status_code=400, detail="Query question string cannot be empty.")
         
     try:
+        logger.info(f"Received query request: '{payload.question[:60]}...'")
+        
         # Step 1: Run Stage 1 Hybrid Retrieval via state containers (Fetches Top 10 candidates)
         hybrid_candidates = app.state.hybrid_retriever.retrieve(payload.question, top_k=config.RETRIEVAL_TOP_K)
         
         if not hybrid_candidates:
+            logger.info("Hybrid search returned empty candidate set. Database is unindexed.")
             return {
                 "answer": "Documentation index is currently completely empty. Please ingest tracking documents first.",
                 "is_context_sufficient": False,
@@ -152,16 +175,18 @@ async def process_query(payload: QueryRequest):
         # Step 4: Run Post-Gen Deterministic Citation Verification Guardrails
         verification_report = CitationVerifier.verify_citations(llm_output["answer"], elite_chunks)
 
+        logger.info("Query processed and citations verified successfully.")
         return {
             "answer": llm_output["answer"],
             "is_context_sufficient": llm_output["is_context_sufficient"],
             "verification_matrix": verification_report
         }
     except Exception as e:
+        logger.error(f"Query resolution pipeline failure: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Query resolution pipeline failure: {str(e)}")
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> Dict[str, str]:
     """Liveness probe for infrastructure monitoring trackers."""
     return {"status": "healthy", "engine": "enterprise_hybrid_rag"}

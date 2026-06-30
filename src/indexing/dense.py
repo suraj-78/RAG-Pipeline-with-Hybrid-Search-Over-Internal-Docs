@@ -45,14 +45,18 @@ class DenseVectorIndex:
         )
 
     def index_chunks(self, chunks: List[Chunk]) -> None:
-        """Pushes structured text slices and structural metadata tags into the vector index."""
+        """Upserts structured text slices and metadata tags into the dense vector index.
+        
+        Using upsert prevents unique constraint violations if documents are re-ingested.
+        """
         if not chunks:
+            logger.info("Empty chunk list provided to dense vector index. Ingestion skipped.")
             return
 
-        ids = [chunk.id for chunk in chunks]
-        documents = [chunk.page_content for chunk in chunks]
+        ids: List[str] = [chunk.id for chunk in chunks]
+        documents: List[str] = [chunk.page_content for chunk in chunks]
         
-        metadatas = []
+        metadatas: List[Dict[str, Any]] = []
         for chunk in chunks:
             meta_dict = {
                 "source_path": chunk.metadata.source_path,
@@ -62,7 +66,8 @@ class DenseVectorIndex:
             }
             metadatas.append(meta_dict)
 
-        self.collection.add(
+        logger.info(f"Upserting {len(chunks)} chunks into dense vector database (ChromaDB)...")
+        self.collection.upsert(
             ids=ids,
             documents=documents,
             metadatas=metadatas
