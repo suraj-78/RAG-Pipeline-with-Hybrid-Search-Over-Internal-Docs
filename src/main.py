@@ -1,8 +1,13 @@
 import os
+import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+
+# Initialize logging configuration
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 # Central configuration and architecture mapping
 from src.config import config
@@ -21,7 +26,7 @@ from src.generation.verifier import CitationVerifier
 # =====================================================================
 @asynccontextmanager
 async def app_lifespan(app: FastAPI):
-    print("\n🚀 [STARTUP] Booting Enterprise Hybrid RAG Engine API Node...")
+    logger.info("Booting Enterprise Hybrid RAG Engine API Node...")
     try:
         config.validate_environment()
         
@@ -39,11 +44,11 @@ async def app_lifespan(app: FastAPI):
         app.state.reranker = DocumentReranker()
         app.state.generator = GroundedGenerator()
         
-        print("✅ [STARTUP] Systems check passed. All neural indexing layers loaded cleanly.")
+        logger.info("Systems check passed. All neural indexing layers loaded cleanly.")
     except Exception as e:
-        print(f"❌ [CRITICAL STARTUP FAILURE] Initialization sequence aborted: {str(e)}")
+        logger.critical(f"Initialization sequence aborted: {str(e)}")
     yield
-    print("🛑 [SHUTDOWN] Evicting memory models and closing disk locks cleanly...\n")
+    logger.info("Evicting memory models and closing disk locks cleanly...")
 
 
 # Instantiate the FastAPI context node matching structural lifespan hooks
@@ -91,10 +96,10 @@ async def ingest_document(payload: IngestRequest):
         
         # Step 2: Dynamic Ingestion Routing to completely prevent Token Overflow (Error 413)
         if document.metadata.file_type == "md":
-            print("[INGESTION] Structure-Aware Markdown Chunking activated.")
+            logger.info("Structure-Aware Markdown Chunking activated.")
             raw_chunks = ChunkingEngine.structure_aware_markdown_chunk(document)
         else:
-            print(f"[INGESTION] Fixed-Size Sliding Window Chunking activated for .{document.metadata.file_type}")
+            logger.info(f"Fixed-Size Sliding Window Chunking activated for .{document.metadata.file_type}")
             raw_chunks = ChunkingEngine.fixed_size_chunk(
                 document, 
                 chunk_size=config.CHUNK_SIZE, 

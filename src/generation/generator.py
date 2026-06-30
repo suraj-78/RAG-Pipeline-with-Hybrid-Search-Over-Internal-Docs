@@ -1,9 +1,12 @@
 import os
 import json
+import logging
 from typing import List, Dict, Any
 # Transitioned SDK reference from OpenAI to Groq for model inference
 from groq import Groq
 from src.config import config
+
+logger = logging.getLogger(__name__)
 
 class GroundedGenerator:
     """The execution core that enforces strict grounding boundaries onto open-source LLMs."""
@@ -55,8 +58,8 @@ class GroundedGenerator:
             # Parse the raw JSON string safely back into dictionary structures
             return json.loads(completion.choices[0].message.content)
         except json.JSONDecodeError as e:
-            print(f"[ERROR] Failed to parse Groq JSON response: {str(e)}")
+            logger.error(f"Failed to parse Groq JSON response: {str(e)}")
             return {"answer": "Error: LLM response was not valid JSON.", "is_context_sufficient": False}
         except Exception as e:
-            print(f"[ERROR] LLM generation failed: {str(e)}")
+            logger.error(f"LLM generation failed: {str(e)}")
             return {"answer": f"Error: {str(e)}", "is_context_sufficient": False}

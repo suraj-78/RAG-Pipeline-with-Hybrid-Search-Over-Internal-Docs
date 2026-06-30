@@ -1,9 +1,12 @@
 import os
-import re  # <-- BUG FIX: Imported regex library to prevent NameError in re.sub
+import re
+import logging
 from typing import Any
 from pypdf import PdfReader
 from bs4 import BeautifulSoup
 from src.ingestion.schemas import Document, DocumentMetadata
+
+logger = logging.getLogger(__name__)
 
 class DocumentParserRouter:
     """Enterprise document routing engine with embedded strict unicode sanitization."""
@@ -87,7 +90,7 @@ class DocumentParserRouter:
         elif ext in ["txt", "md"]:
             raw_text = self._parse_txt(file_path)
         else:
-            print(f"[WARN] Unknown extension '.{ext}'. Falling back to raw string stream layout.")
+            logger.warning(f"Unknown extension '.{ext}'. Falling back to raw string stream layout.")
             raw_text = self._parse_txt(file_path)
 
         # FIXED: Core Sanitization Filter call injected right before the Pydantic construction window

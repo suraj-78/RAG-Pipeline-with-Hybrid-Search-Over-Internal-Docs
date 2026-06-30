@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List, Dict, Any
 import chromadb
 from chromadb.api.types import EmbeddingFunction, Documents, Embeddings  # FIXED: Imported core typing interfaces
@@ -6,13 +7,15 @@ from sentence_transformers import SentenceTransformer  # FIXED: Direct clean loa
 from src.ingestion.schemas import Chunk
 from src.config import config  # Centralized configuration gateway
 
+logger = logging.getLogger(__name__)
+
 class LocalSentenceTransformerEmbeddingFunction(EmbeddingFunction):
     """Custom high-performance embedding driver to completely bypass PyTorch 2.x meta-tensor bugs on Windows."""
     def __init__(self, model_name: str):
         import torch
         # Explicitly determine physical hardware targets, preventing empty meta device initialization deadlocks
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"[INFRASTRUCTURE] Initializing local embedding tensors securely on device target: '{self.device}'")
+        logger.info(f"Initializing local embedding tensors securely on device target: '{self.device}'")
         
         # Instantiate directly using SentenceTransformer to enforce clean weight allocation mappings
         self.model = SentenceTransformer(model_name, device=self.device)
